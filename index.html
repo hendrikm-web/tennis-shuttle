@@ -602,11 +602,11 @@
           <!-- Firebase Status -->
           <div class="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200/80 space-y-2.5">
             <div class="flex items-center justify-between">
-              <label class="block text-xs font-bold uppercase tracking-wider text-emerald-900">Firebase Firestore Cloud-Sync</label>
+              <label class="block text-xs font-bold uppercase tracking-wider text-emerald-900">Firebase Realtime Database Sync</label>
               <span id="admin-sync-status-label" class="text-[11px] text-emerald-700 font-bold">Prüfe Verbindung...</span>
             </div>
             <p class="text-xs text-slate-600 leading-relaxed">
-              Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (<code class="bg-white px-1 rounded">tennis_shuttle/main_state</code>).
+              Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (Pfad <code class="bg-white px-1 rounded">/tennis_shuttle/main_state</code>).
             </p>
             <div id="admin-sync-error-box" class="hidden bg-rose-50 border border-rose-200 text-rose-800 text-[11px] p-2.5 rounded-xl font-medium"></div>
             <div class="flex gap-2 pt-1">
@@ -691,15 +691,16 @@
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getFirestore, doc, getDoc, setDoc, onSnapshot
-    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+      getDatabase, ref, set, onValue, off
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // =========================================================================
-    // 1. FEST VERDRAHTETE FIREBASE-KONFIGURATION & ZENTRALER STATE
+    // 1. FEST VERDRAHTETE FIREBASE REALTIME DATABASE KONFIGURATION
     // =========================================================================
     const FIREBASE_CONFIG = {
       apiKey: "AIzaSyAqhiZt7teRFStnvaS8gN_eWhzP9QNlOjs",
       authDomain: "tennis-shuttle.firebaseapp.com",
+      databaseURL: "https://tennis-shuttle-default-rtdb.europe-west1.firebasedatabase.app",
       projectId: "tennis-shuttle",
       storageBucket: "tennis-shuttle.firebasestorage.app",
       messagingSenderId: "1070292316268",
@@ -707,8 +708,7 @@
       measurementId: "G-2HCQ7VGK5X"
     };
 
-    const FIRESTORE_COLLECTION = "tennis_shuttle";
-    const FIRESTORE_DOC_ID = "main_state";
+    const RTDB_PATH = "tennis_shuttle/main_state";
 
     const STORAGE_KEY_DATA = "tennis_shuttle_state_v2";
     const STORAGE_KEY_PIN = "tennis_shuttle_pin_v2";
@@ -736,11 +736,11 @@
       selectedRideId: null
     };
 
-    let db = null;
-    let shuttleDocRef = null;
-    let unsubscribeSnapshot = null;
-
-    // =========================================================================
+    let rtdb = null;
+    let shuttleDbRef = null;
+    let connectedDbRef = null;
+    let unsubscribeValue = null;
+    let unsubscribeConnected = null;
     // 2. HILFSFUNKTIONEN
     // =========================================================================
     function generateId(prefix = "id") {
@@ -964,31 +964,28 @@
 
     async function syncStateToCloud(showSuccessToast = false) {
       saveState();
-      if (!shuttleDocRef || state.isSyncingFromCloud) return false;
+      if (!shuttleDbRef || state.isSyncingFromCloud) return false;
       try {
-        await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
+        await set(shuttleDbRef, buildSyncPayload());
         state.isFirebaseMode = true;
         updateSyncBadge(true, null);
-        if (showSuccessToast) showToast("Erfolgreich mit Firebase synchronisiert!");
+        if (showSuccessToast) showToast("Erfolgreich mit Realtime Database synchronisiert!");
         return true;
       } catch (err) {
-        console.error("Firestore Write Error:", err);
+        console.error("Realtime Database Write Error:", err);
         state.isFirebaseMode = false;
-        const readableErr = formatFirestoreError(err);
+        const readableErr = formatRealtimeDbError(err);
         updateSyncBadge(false, readableErr);
         showToast("Cloud-Sync Fehler: " + readableErr, "error");
         return false;
       }
     }
 
-    function formatFirestoreError(err) {
+    function formatRealtimeDbError(err) {
       const code = err?.code || "";
       const msg = err?.message || String(err);
-      if (code === "permission-denied" || msg.includes("Missing or insufficient permissions")) {
-        return "Zugriff verweigert (Firestore-Regeln blockieren Zugriff). Bitte in Firebase unter Firestore → Regeln 'allow read, write: if true;' setzen.";
-      }
-      if (code === "unavailable" || msg.includes("offline")) {
-        return "Firebase Server nicht erreichbar (Offline oder falsche Projekt-ID).";
+      if (code === "PERMISSION_DENIED" || msg.toLowerCase().includes("permission_denied") || msg.toLowerCase().includes("permission denied")) {
+        return "Zugriff verweigert (Realtime Database Regeln blockieren Zugriff). Bitte in Firebase unter Realtime Database → Regeln '.read': true, '.write': true setzen.";
       }
       return msg;
     }
@@ -1013,9 +1010,13 @@
     }
 
     async function initDataLayer() {
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
+      if (unsubscribeValue) {
+        unsubscribeValue();
+        unsubscribeValue = null;
+      }
+      if (unsubscribeConnected) {
+        unsubscribeConnected();
+        unsubscribeConnected = null;
       }
 
       loadState();
@@ -1024,19 +1025,33 @@
 
       try {
         const app = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
-        db = getFirestore(app);
-        shuttleDocRef = doc(db, FIRESTORE_COLLECTION, FIRESTORE_DOC_ID);
+        if (!rtdb) {
+          rtdb = getDatabase(app);
+        }
+        shuttleDbRef = ref(rtdb, RTDB_PATH);
+        connectedDbRef = ref(rtdb, ".info/connected");
 
-        // 1. Direkter initialer Lese-Check vom Server (deckt Regel- oder Verbindungsfehler sofort auf)
-        try {
-          const initialSnap = await getDoc(shuttleDocRef);
+        // Live-Verbindungsstatus der Realtime Database überwachen
+        unsubscribeConnected = onValue(connectedDbRef, (snap) => {
+          const isConnected = snap.val() === true;
+          if (isConnected) {
+            state.isFirebaseMode = true;
+            updateSyncBadge(true, null);
+          } else {
+            state.isFirebaseMode = false;
+            updateSyncBadge(false, "Verbindung zur Firebase Realtime Database wird aufgebaut oder ist unterbrochen.");
+          }
+        });
+
+        // Echtzeit-Datenstream für /tennis_shuttle/main_state
+        unsubscribeValue = onValue(shuttleDbRef, async (snapshot) => {
           state.isFirebaseMode = true;
           updateSyncBadge(true, null);
 
-          if (initialSnap.exists()) {
+          if (snapshot.exists()) {
             state.isSyncingFromCloud = true;
             try {
-              applyCloudOrLocalPayload(initialSnap.data());
+              applyCloudOrLocalPayload(snapshot.val());
               saveState();
               state.hasInitialCloudSnapshot = true;
               evaluateAccessFlow();
@@ -1044,43 +1059,25 @@
             } finally {
               state.isSyncingFromCloud = false;
             }
-          } else {
+          } else if (!state.hasInitialCloudSnapshot) {
             state.hasInitialCloudSnapshot = true;
-            await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
-          }
-        } catch (readErr) {
-          console.error("Initial Firestore getDoc failed:", readErr);
-          const readableErr = formatFirestoreError(readErr);
-          state.isFirebaseMode = false;
-          updateSyncBadge(false, readableErr);
-          showToast("Firebase-Fehler: " + readableErr, "error");
-        }
-
-        // 2. Echtzeit-Listener für alle weiteren Änderungen von anderen Geräten
-        unsubscribeSnapshot = onSnapshot(shuttleDocRef, (snapshot) => {
-          state.isFirebaseMode = true;
-          updateSyncBadge(true, null);
-
-          if (snapshot.exists() && !snapshot.metadata.hasPendingWrites) {
-            state.isSyncingFromCloud = true;
             try {
-              applyCloudOrLocalPayload(snapshot.data());
-              saveState();
-              state.hasInitialCloudSnapshot = true;
-              evaluateAccessFlow();
-              renderAll();
-            } finally {
-              state.isSyncingFromCloud = false;
+              await set(shuttleDbRef, buildSyncPayload());
+            } catch (writeErr) {
+              console.error("Initial RTDB set failed:", writeErr);
+              const readableErr = formatRealtimeDbError(writeErr);
+              state.isFirebaseMode = false;
+              updateSyncBadge(false, readableErr);
             }
           }
         }, (error) => {
-          console.error("Firestore Snapshot Error:", error);
-          const readableErr = formatFirestoreError(error);
+          console.error("Realtime Database onValue Error:", error);
+          const readableErr = formatRealtimeDbError(error);
           state.isFirebaseMode = false;
           updateSyncBadge(false, readableErr);
         });
       } catch (err) {
-        console.error("Firebase Init failed:", err);
+        console.error("Firebase RTDB Init failed:", err);
         state.isFirebaseMode = false;
         updateSyncBadge(false, err.message);
       }
