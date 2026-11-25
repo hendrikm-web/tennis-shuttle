@@ -600,14 +600,21 @@
 
         <div class="p-4 sm:p-5 overflow-y-auto space-y-5 text-sm">
           <!-- Firebase Status -->
-          <div class="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200/80 space-y-1.5">
+          <div class="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200/80 space-y-2.5">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold uppercase tracking-wider text-emerald-900">Firebase Firestore Cloud-Sync</label>
-              <span id="admin-sync-status-label" class="text-[11px] text-emerald-700 font-bold">Verbunden (tennis-shuttle)</span>
+              <span id="admin-sync-status-label" class="text-[11px] text-emerald-700 font-bold">Prüfe Verbindung...</span>
             </div>
             <p class="text-xs text-slate-600 leading-relaxed">
-              Fest verbunden mit Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (<code class="bg-white px-1 rounded">tennis_shuttle/main_state</code>). Alle Änderungen (inkl. Familien-PIN) werden automatisch live synchronisiert.
+              Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (<code class="bg-white px-1 rounded">tennis_shuttle/main_state</code>).
             </p>
+            <div id="admin-sync-error-box" class="hidden bg-rose-50 border border-rose-200 text-rose-800 text-[11px] p-2.5 rounded-xl font-medium"></div>
+            <div class="flex gap-2 pt-1">
+              <button type="button" id="btn-test-cloud-sync" class="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition flex items-center justify-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Verbindung testen & synchronisieren</span>
+              </button>
+            </div>
           </div>
 
           <!-- PIN ändern -->
@@ -682,9 +689,9 @@
 
   <!-- ==================== APPLICATION SCRIPT ==================== -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getFirestore, doc, setDoc, onSnapshot
+      getFirestore, doc, getDoc, setDoc, onSnapshot
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     // =========================================================================
@@ -915,28 +922,22 @@
       };
     }
 
+    function applyCloudOrLocalPayload(payload) {
+      if (!payload || typeof payload !== "object") return;
+      state.drivers = Array.isArray(payload.drivers) ? payload.drivers.map(x => sanitizeRecord("drivers", x)).filter(Boolean) : [];
+      state.children = Array.isArray(payload.children) ? payload.children.map(x => sanitizeRecord("children", x)).filter(Boolean) : [];
+      state.templates = Array.isArray(payload.templates) ? payload.templates.map(x => sanitizeRecord("templates", x)).filter(Boolean) : [];
+      state.needs = Array.isArray(payload.needs) ? payload.needs.map(x => sanitizeRecord("needs", x)).filter(Boolean) : [];
+      state.rides = Array.isArray(payload.rides) ? payload.rides.map(x => sanitizeRecord("rides", x)).filter(Boolean) : [];
+      if (payload.pin && String(payload.pin).trim().length >= 4) {
+        state.pin = String(payload.pin).trim();
+        localStorage.setItem(STORAGE_KEY_PIN, state.pin);
+      }
+    }
+
     function saveState() {
       localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(buildSyncPayload()));
       localStorage.setItem(STORAGE_KEY_PIN, state.pin || "2026");
-    }
-
-    function applyCloudOrLocalPayload(parsed) {
-      if (!parsed || typeof parsed !== "object") return;
-      state.drivers = Array.isArray(parsed.drivers) ? parsed.drivers.map(x => sanitizeRecord("drivers", x)).filter(Boolean) : [];
-      state.children = Array.isArray(parsed.children) ? parsed.children.map(x => sanitizeRecord("children", x)).filter(Boolean) : [];
-      state.templates = Array.isArray(parsed.templates) ? parsed.templates.map(x => sanitizeRecord("templates", x)).filter(Boolean) : [];
-      state.needs = Array.isArray(parsed.needs) ? parsed.needs.map(x => sanitizeRecord("needs", x)).filter(Boolean) : [];
-      state.rides = Array.isArray(parsed.rides) ? parsed.rides.map(x => sanitizeRecord("rides", x)).filter(Boolean) : [];
-      if (parsed.pin && String(parsed.pin).trim().length >= 4) {
-        state.pin = String(parsed.pin).trim();
-        localStorage.setItem(STORAGE_KEY_PIN, state.pin);
-        const hintEl = document.getElementById("hint-pin");
-        if (hintEl) hintEl.textContent = state.pin;
-      }
-      if (state.currentUserId && !state.drivers.some(d => d.id === state.currentUserId)) {
-        state.currentUserId = null;
-        localStorage.removeItem(STORAGE_KEY_USER);
-      }
     }
 
     function loadState() {
@@ -961,19 +962,35 @@
       }
     }
 
-    async function syncStateToCloud() {
+    async function syncStateToCloud(showSuccessToast = false) {
       saveState();
-      if (!shuttleDocRef || state.isSyncingFromCloud) return;
+      if (!shuttleDocRef || state.isSyncingFromCloud) return false;
       try {
         await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
         state.isFirebaseMode = true;
-        updateSyncBadge(true);
+        updateSyncBadge(true, null);
+        if (showSuccessToast) showToast("Erfolgreich mit Firebase synchronisiert!");
+        return true;
       } catch (err) {
         console.error("Firestore Write Error:", err);
         state.isFirebaseMode = false;
-        updateSyncBadge(false);
-        showToast("Cloud-Sync Fehler: " + err.message, "error");
+        const readableErr = formatFirestoreError(err);
+        updateSyncBadge(false, readableErr);
+        showToast("Cloud-Sync Fehler: " + readableErr, "error");
+        return false;
       }
+    }
+
+    function formatFirestoreError(err) {
+      const code = err?.code || "";
+      const msg = err?.message || String(err);
+      if (code === "permission-denied" || msg.includes("Missing or insufficient permissions")) {
+        return "Zugriff verweigert (Firestore-Regeln blockieren Zugriff). Bitte in Firebase unter Firestore → Regeln 'allow read, write: if true;' setzen.";
+      }
+      if (code === "unavailable" || msg.includes("offline")) {
+        return "Firebase Server nicht erreichbar (Offline oder falsche Projekt-ID).";
+      }
+      return msg;
     }
 
     async function dbSetItem(colName, item) {
@@ -986,16 +1003,16 @@
       else state[colName].push(cleanItem);
 
       renderAll();
-      await syncStateToCloud();
+      await syncStateToCloud(false);
     }
 
     async function dbDeleteItem(colName, id) {
       state[colName] = (state[colName] || []).filter(x => x.id !== id);
       renderAll();
-      await syncStateToCloud();
+      await syncStateToCloud(false);
     }
 
-    function initDataLayer() {
+    async function initDataLayer() {
       if (unsubscribeSnapshot) {
         unsubscribeSnapshot();
         unsubscribeSnapshot = null;
@@ -1006,16 +1023,45 @@
       renderAll();
 
       try {
-        const app = initializeApp(FIREBASE_CONFIG);
+        const app = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
         shuttleDocRef = doc(db, FIRESTORE_COLLECTION, FIRESTORE_DOC_ID);
 
-        unsubscribeSnapshot = onSnapshot(shuttleDocRef, { includeMetadataChanges: true }, async (snapshot) => {
-          const isFromCache = snapshot.metadata?.fromCache === true;
-          state.isFirebaseMode = !isFromCache;
-          updateSyncBadge(!isFromCache);
+        // 1. Direkter initialer Lese-Check vom Server (deckt Regel- oder Verbindungsfehler sofort auf)
+        try {
+          const initialSnap = await getDoc(shuttleDocRef);
+          state.isFirebaseMode = true;
+          updateSyncBadge(true, null);
 
-          if (snapshot.exists()) {
+          if (initialSnap.exists()) {
+            state.isSyncingFromCloud = true;
+            try {
+              applyCloudOrLocalPayload(initialSnap.data());
+              saveState();
+              state.hasInitialCloudSnapshot = true;
+              evaluateAccessFlow();
+              renderAll();
+            } finally {
+              state.isSyncingFromCloud = false;
+            }
+          } else {
+            state.hasInitialCloudSnapshot = true;
+            await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
+          }
+        } catch (readErr) {
+          console.error("Initial Firestore getDoc failed:", readErr);
+          const readableErr = formatFirestoreError(readErr);
+          state.isFirebaseMode = false;
+          updateSyncBadge(false, readableErr);
+          showToast("Firebase-Fehler: " + readableErr, "error");
+        }
+
+        // 2. Echtzeit-Listener für alle weiteren Änderungen von anderen Geräten
+        unsubscribeSnapshot = onSnapshot(shuttleDocRef, (snapshot) => {
+          state.isFirebaseMode = true;
+          updateSyncBadge(true, null);
+
+          if (snapshot.exists() && !snapshot.metadata.hasPendingWrites) {
             state.isSyncingFromCloud = true;
             try {
               applyCloudOrLocalPayload(snapshot.data());
@@ -1026,29 +1072,25 @@
             } finally {
               state.isSyncingFromCloud = false;
             }
-          } else if (!isFromCache && !state.hasInitialCloudSnapshot) {
-            state.hasInitialCloudSnapshot = true;
-            const hasLocalData = state.drivers.length > 0 || state.children.length > 0 || state.needs.length > 0 || state.rides.length > 0;
-            if (hasLocalData) {
-              await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
-            }
           }
         }, (error) => {
           console.error("Firestore Snapshot Error:", error);
+          const readableErr = formatFirestoreError(error);
           state.isFirebaseMode = false;
-          updateSyncBadge(false);
-          showToast("Firebase-Verbindung unterbrochen: " + error.message, "warning");
+          updateSyncBadge(false, readableErr);
         });
       } catch (err) {
         console.error("Firebase Init failed:", err);
         state.isFirebaseMode = false;
-        updateSyncBadge(false);
+        updateSyncBadge(false, err.message);
       }
     }
 
-    function updateSyncBadge(isLive) {
+    function updateSyncBadge(isLive, errorMessage = null) {
       const badge = document.getElementById("sync-badge");
       const adminLabel = document.getElementById("admin-sync-status-label");
+      const errorBox = document.getElementById("admin-sync-error-box");
+
       if (isLive) {
         badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800";
         badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live-Sync`;
@@ -1056,12 +1098,20 @@
           adminLabel.textContent = "Live verbunden (tennis-shuttle)";
           adminLabel.className = "text-[11px] text-emerald-700 font-bold";
         }
+        if (errorBox) {
+          errorBox.classList.add("hidden");
+          errorBox.textContent = "";
+        }
       } else {
         badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800";
-        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Lokal`;
+        badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Lokal / Fehler`;
         if (adminLabel) {
-          adminLabel.textContent = "Offline / Lokal (wartet auf Netz)";
-          adminLabel.className = "text-[11px] text-amber-700 font-bold";
+          adminLabel.textContent = "Nicht verbunden";
+          adminLabel.className = "text-[11px] text-rose-700 font-bold";
+        }
+        if (errorBox && errorMessage) {
+          errorBox.textContent = errorMessage;
+          errorBox.classList.remove("hidden");
         }
       }
     }
@@ -2536,6 +2586,13 @@
         document.getElementById("modal-admin").classList.remove("hidden");
       };
       document.getElementById("btn-close-admin").onclick = () => document.getElementById("modal-admin").classList.add("hidden");
+
+      document.getElementById("btn-test-cloud-sync").onclick = async () => {
+        const ok = await syncStateToCloud(true);
+        if (ok) {
+          await initDataLayer();
+        }
+      };
 
       document.getElementById("btn-save-pin").onclick = async () => {
         const newPin = document.getElementById("admin-pin-input").value.trim();
