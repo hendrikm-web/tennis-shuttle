@@ -72,7 +72,7 @@
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Familien-PIN eingeben</label>
             <input type="password" id="pin-input" inputmode="numeric" maxlength="12" placeholder="••••"
               class="w-full text-center text-2xl tracking-[0.4em] font-bold px-4 py-3.5 rounded-2xl border-2 border-slate-200 focus:border-emerald-600 focus:outline-none transition" />
-            <p class="text-xs text-slate-400 mt-2 text-center">Standard-PIN: <span class="font-mono font-bold text-slate-600" id="hint-pin">2026</span></p>
+            <p class="text-xs text-slate-400 mt-2 text-center">Aktueller PIN: <span class="font-mono font-bold text-slate-600" id="hint-pin">2026</span></p>
           </div>
           <button type="button" id="btn-verify-pin" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
             <span>Weiter</span>
@@ -101,7 +101,7 @@
           <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">Erst-Einrichtung</span>
           <h1 class="text-2xl font-extrabold text-slate-900">Stammdaten einrichten</h1>
           <p class="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-            Lege zuerst eure Fahrer (Eltern / Familien) und anschließend eure Kinder an. Danach könnt ihr sofort Fahrten und Trainings planen.
+            Lege zuerst eure Fahrer (Eltern / Familien) und anschließend eure Kinder an. Alle Änderungen werden live in Firebase gespeichert.
           </p>
         </div>
 
@@ -183,13 +183,13 @@
           <div id="wizard-child-list" class="flex flex-wrap gap-2 pt-1"></div>
         </div>
 
-        <!-- Optional: Firebase Setup auch direkt im Wizard erreichbar -->
-        <div class="bg-white rounded-2xl p-4 border border-slate-200/80 flex items-center justify-between gap-3">
+        <!-- Cloud-Status Hinweis -->
+        <div class="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200/80 flex items-center justify-between gap-3">
           <div class="text-xs text-slate-600">
-            <strong class="text-slate-900 block">Schon eine Firebase-Datenbank vorhanden?</strong>
-            Verbinde sie hier, um vorhandene Stammdaten live zu laden.
+            <strong class="text-emerald-950 block">Firebase Live-Sync aktiv (tennis-shuttle)</strong>
+            Bereits in der Cloud gespeicherte Stammdaten werden automatisch geladen.
           </div>
-          <button type="button" id="wiz-btn-open-admin" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs shrink-0">
+          <button type="button" id="wiz-btn-open-admin" class="px-3 py-2 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-900 font-bold text-xs shrink-0">
             Einstellungen
           </button>
         </div>
@@ -215,7 +215,7 @@
               <h1 class="font-extrabold text-base sm:text-lg tracking-tight text-slate-900 leading-none">Tennis-Shuttle</h1>
               <span id="sync-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800">
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                Lokal
+                Verbinde...
               </span>
             </div>
             <p class="text-[11px] text-slate-500 mt-0.5" id="header-subtitle">Leistungszentrum</p>
@@ -227,7 +227,7 @@
             <i data-lucide="user-check" class="w-3.5 h-3.5 text-emerald-600"></i>
             <span id="header-user-name" class="max-w-[95px] truncate">Profil</span>
           </button>
-          <button type="button" id="btn-open-admin" title="Einstellungen & Sync" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 active:scale-95 transition text-slate-600">
+          <button type="button" id="btn-open-admin" title="Einstellungen & Backup" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 active:scale-95 transition text-slate-600">
             <i data-lucide="settings" class="w-4 h-4"></i>
           </button>
         </div>
@@ -585,13 +585,13 @@
       </div>
     </div>
 
-    <!-- ==================== MODAL: EINSTELLUNGEN, BACKUP & FIREBASE ==================== -->
+    <!-- ==================== MODAL: EINSTELLUNGEN, BACKUP & FIREBASE STATUS ==================== -->
     <div id="modal-admin" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <i data-lucide="settings" class="w-5 h-5 text-emerald-600"></i>
-            <h3 class="text-base font-extrabold text-slate-900">Einstellungen & Echtzeit-Sync</h3>
+            <h3 class="text-base font-extrabold text-slate-900">Einstellungen & Cloud-Sync</h3>
           </div>
           <button type="button" id="btn-close-admin" class="p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600">
             <i data-lucide="x" class="w-5 h-5"></i>
@@ -599,6 +599,17 @@
         </div>
 
         <div class="p-4 sm:p-5 overflow-y-auto space-y-5 text-sm">
+          <!-- Firebase Status -->
+          <div class="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200/80 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold uppercase tracking-wider text-emerald-900">Firebase Firestore Cloud-Sync</label>
+              <span id="admin-sync-status-label" class="text-[11px] text-emerald-700 font-bold">Verbunden (tennis-shuttle)</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Fest verbunden mit Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (<code class="bg-white px-1 rounded">tennis_shuttle/main_state</code>). Alle Änderungen (inkl. Familien-PIN) werden automatisch live synchronisiert.
+            </p>
+          </div>
+
           <!-- PIN ändern -->
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 space-y-2">
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Gemeinsamer Familien-PIN</label>
@@ -622,27 +633,6 @@
                 <span>Importieren</span>
                 <input type="file" id="input-import-json" accept=".json,application/json" class="hidden" />
               </label>
-            </div>
-          </div>
-
-          <!-- Firebase Firestore Config -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between">
-              <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Firebase Config (JSON)</label>
-              <span class="text-[11px] text-emerald-600 font-semibold">Firestore Echtzeit-Sync</span>
-            </div>
-            <p class="text-xs text-slate-500 leading-relaxed">
-              Füge hier das <code class="bg-slate-100 px-1 rounded">firebaseConfig</code>-Objekt ein, um alle Änderungen live zwischen allen Geräten zu synchronisieren.
-            </p>
-            <textarea id="admin-firebase-json" rows="5" placeholder='{"apiKey": "...", "authDomain": "...", "projectId": "...", "storageBucket": "...", "messagingSenderId": "...", "appId": "..."}'
-              class="w-full rounded-xl border border-slate-300 p-3 font-mono text-xs focus:border-emerald-600 focus:outline-none"></textarea>
-            <div class="flex gap-2 pt-1">
-              <button type="button" id="btn-save-firebase" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow">
-                Firebase verbinden
-              </button>
-              <button type="button" id="btn-clear-firebase" class="px-3 py-2.5 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 font-semibold text-xs">
-                Trennen
-              </button>
             </div>
           </div>
 
@@ -694,16 +684,28 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch
+      getFirestore, doc, setDoc, onSnapshot
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
     // =========================================================================
-    // 1. KONSTANTEN & ZENTRALER STATE
+    // 1. FEST VERDRAHTETE FIREBASE-KONFIGURATION & ZENTRALER STATE
     // =========================================================================
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAqhiZt7teRFStnvaS8gN_eWhzP9QNlOjs",
+      authDomain: "tennis-shuttle.firebaseapp.com",
+      projectId: "tennis-shuttle",
+      storageBucket: "tennis-shuttle.firebasestorage.app",
+      messagingSenderId: "1070292316268",
+      appId: "1:1070292316268:web:7ffe8ca09de50542286849",
+      measurementId: "G-2HCQ7VGK5X"
+    };
+
+    const FIRESTORE_COLLECTION = "tennis_shuttle";
+    const FIRESTORE_DOC_ID = "main_state";
+
     const STORAGE_KEY_DATA = "tennis_shuttle_state_v2";
     const STORAGE_KEY_PIN = "tennis_shuttle_pin_v2";
     const STORAGE_KEY_USER = "tennis_shuttle_user_v2";
-    const STORAGE_KEY_FB = "tennis_shuttle_firebase_cfg_v2";
 
     const WEEKDAYS_DE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
     const WEEKDAYS_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
@@ -722,11 +724,14 @@
       planFilter: "all",
       fairnessPeriod: "all",
       isFirebaseMode: false,
+      hasInitialCloudSnapshot: false,
+      isSyncingFromCloud: false,
       selectedRideId: null
     };
 
     let db = null;
-    let unsubscribers = [];
+    let shuttleDocRef = null;
+    let unsubscribeSnapshot = null;
 
     // =========================================================================
     // 2. HILFSFUNKTIONEN
@@ -846,7 +851,7 @@
     }
 
     // =========================================================================
-    // 3. STATE PERSISTENZ (saveState / loadState + OPTIONAL FIRESTORE)
+    // 3. STATE PERSISTENZ & ECHTZEIT-SYNCHRONISATION (FIRESTORE + LOCALSTORAGE)
     // =========================================================================
     function sanitizeRecord(colName, item) {
       if (!item) return null;
@@ -898,15 +903,40 @@
       return base;
     }
 
-    function saveState() {
-      const payload = {
+    function buildSyncPayload() {
+      return {
         drivers: state.drivers,
         children: state.children,
         templates: state.templates,
         needs: state.needs,
-        rides: state.rides
+        rides: state.rides,
+        pin: state.pin || "2026",
+        updatedAt: new Date().toISOString()
       };
-      localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(payload));
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(buildSyncPayload()));
+      localStorage.setItem(STORAGE_KEY_PIN, state.pin || "2026");
+    }
+
+    function applyCloudOrLocalPayload(parsed) {
+      if (!parsed || typeof parsed !== "object") return;
+      state.drivers = Array.isArray(parsed.drivers) ? parsed.drivers.map(x => sanitizeRecord("drivers", x)).filter(Boolean) : [];
+      state.children = Array.isArray(parsed.children) ? parsed.children.map(x => sanitizeRecord("children", x)).filter(Boolean) : [];
+      state.templates = Array.isArray(parsed.templates) ? parsed.templates.map(x => sanitizeRecord("templates", x)).filter(Boolean) : [];
+      state.needs = Array.isArray(parsed.needs) ? parsed.needs.map(x => sanitizeRecord("needs", x)).filter(Boolean) : [];
+      state.rides = Array.isArray(parsed.rides) ? parsed.rides.map(x => sanitizeRecord("rides", x)).filter(Boolean) : [];
+      if (parsed.pin && String(parsed.pin).trim().length >= 4) {
+        state.pin = String(parsed.pin).trim();
+        localStorage.setItem(STORAGE_KEY_PIN, state.pin);
+        const hintEl = document.getElementById("hint-pin");
+        if (hintEl) hintEl.textContent = state.pin;
+      }
+      if (state.currentUserId && !state.drivers.some(d => d.id === state.currentUserId)) {
+        state.currentUserId = null;
+        localStorage.removeItem(STORAGE_KEY_USER);
+      }
     }
 
     function loadState() {
@@ -920,12 +950,7 @@
         return;
       }
       try {
-        const parsed = JSON.parse(raw);
-        state.drivers = Array.isArray(parsed.drivers) ? parsed.drivers.map(x => sanitizeRecord("drivers", x)).filter(Boolean) : [];
-        state.children = Array.isArray(parsed.children) ? parsed.children.map(x => sanitizeRecord("children", x)).filter(Boolean) : [];
-        state.templates = Array.isArray(parsed.templates) ? parsed.templates.map(x => sanitizeRecord("templates", x)).filter(Boolean) : [];
-        state.needs = Array.isArray(parsed.needs) ? parsed.needs.map(x => sanitizeRecord("needs", x)).filter(Boolean) : [];
-        state.rides = Array.isArray(parsed.rides) ? parsed.rides.map(x => sanitizeRecord("rides", x)).filter(Boolean) : [];
+        applyCloudOrLocalPayload(JSON.parse(raw));
       } catch (err) {
         console.error("Fehler beim Laden des localStorage:", err);
         state.drivers = [];
@@ -933,6 +958,21 @@
         state.templates = [];
         state.needs = [];
         state.rides = [];
+      }
+    }
+
+    async function syncStateToCloud() {
+      saveState();
+      if (!shuttleDocRef || state.isSyncingFromCloud) return;
+      try {
+        await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
+        state.isFirebaseMode = true;
+        updateSyncBadge(true);
+      } catch (err) {
+        console.error("Firestore Write Error:", err);
+        state.isFirebaseMode = false;
+        updateSyncBadge(false);
+        showToast("Cloud-Sync Fehler: " + err.message, "error");
       }
     }
 
@@ -945,85 +985,84 @@
       if (idx >= 0) state[colName][idx] = cleanItem;
       else state[colName].push(cleanItem);
 
-      saveState();
-
-      if (state.isFirebaseMode && db) {
-        try {
-          await setDoc(doc(db, colName, cleanItem.id), cleanItem);
-        } catch (err) {
-          console.error("Firestore Write Error:", err);
-          showToast("Firebase-Sync Fehler: " + err.message, "error");
-        }
-      }
       renderAll();
+      await syncStateToCloud();
     }
 
     async function dbDeleteItem(colName, id) {
       state[colName] = (state[colName] || []).filter(x => x.id !== id);
-      saveState();
-
-      if (state.isFirebaseMode && db) {
-        try {
-          await deleteDoc(doc(db, colName, id));
-        } catch (err) {
-          console.error("Firestore Delete Error:", err);
-          showToast("Firebase-Löschfehler: " + err.message, "error");
-        }
-      }
       renderAll();
+      await syncStateToCloud();
     }
 
-    async function initDataLayer() {
-      unsubscribers.forEach(unsub => unsub());
-      unsubscribers = [];
-
-      loadState();
-
-      const savedFb = localStorage.getItem(STORAGE_KEY_FB);
-      if (savedFb) {
-        try {
-          const cfg = JSON.parse(savedFb);
-          const app = initializeApp(cfg);
-          db = getFirestore(app);
-          state.isFirebaseMode = true;
-          updateSyncBadge(true);
-
-          const cols = ["drivers", "children", "templates", "needs", "rides"];
-          cols.forEach(colName => {
-            const unsub = onSnapshot(collection(db, colName), (snapshot) => {
-              state[colName] = snapshot.docs
-                .map(d => sanitizeRecord(colName, { id: d.id, ...d.data() }))
-                .filter(Boolean);
-              saveState();
-              evaluateAccessFlow();
-              renderAll();
-            }, (error) => {
-              console.error("Firestore Snapshot Error:", error);
-              showToast("Firebase Sync-Fehler: Prüfe Berechtigungen.", "error");
-            });
-            unsubscribers.push(unsub);
-          });
-          return;
-        } catch (err) {
-          console.error("Firebase Init failed:", err);
-          showToast("Firebase-Konfiguration ungültig – nutze lokalen Speicher.", "warning");
-        }
+    function initDataLayer() {
+      if (unsubscribeSnapshot) {
+        unsubscribeSnapshot();
+        unsubscribeSnapshot = null;
       }
 
-      state.isFirebaseMode = false;
-      updateSyncBadge(false);
+      loadState();
       evaluateAccessFlow();
       renderAll();
+
+      try {
+        const app = initializeApp(FIREBASE_CONFIG);
+        db = getFirestore(app);
+        shuttleDocRef = doc(db, FIRESTORE_COLLECTION, FIRESTORE_DOC_ID);
+
+        unsubscribeSnapshot = onSnapshot(shuttleDocRef, { includeMetadataChanges: true }, async (snapshot) => {
+          const isFromCache = snapshot.metadata?.fromCache === true;
+          state.isFirebaseMode = !isFromCache;
+          updateSyncBadge(!isFromCache);
+
+          if (snapshot.exists()) {
+            state.isSyncingFromCloud = true;
+            try {
+              applyCloudOrLocalPayload(snapshot.data());
+              saveState();
+              state.hasInitialCloudSnapshot = true;
+              evaluateAccessFlow();
+              renderAll();
+            } finally {
+              state.isSyncingFromCloud = false;
+            }
+          } else if (!isFromCache && !state.hasInitialCloudSnapshot) {
+            state.hasInitialCloudSnapshot = true;
+            const hasLocalData = state.drivers.length > 0 || state.children.length > 0 || state.needs.length > 0 || state.rides.length > 0;
+            if (hasLocalData) {
+              await setDoc(shuttleDocRef, buildSyncPayload(), { merge: true });
+            }
+          }
+        }, (error) => {
+          console.error("Firestore Snapshot Error:", error);
+          state.isFirebaseMode = false;
+          updateSyncBadge(false);
+          showToast("Firebase-Verbindung unterbrochen: " + error.message, "warning");
+        });
+      } catch (err) {
+        console.error("Firebase Init failed:", err);
+        state.isFirebaseMode = false;
+        updateSyncBadge(false);
+      }
     }
 
     function updateSyncBadge(isLive) {
       const badge = document.getElementById("sync-badge");
+      const adminLabel = document.getElementById("admin-sync-status-label");
       if (isLive) {
         badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800";
         badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live-Sync`;
+        if (adminLabel) {
+          adminLabel.textContent = "Live verbunden (tennis-shuttle)";
+          adminLabel.className = "text-[11px] text-emerald-700 font-bold";
+        }
       } else {
         badge.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800";
         badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Lokal`;
+        if (adminLabel) {
+          adminLabel.textContent = "Offline / Lokal (wartet auf Netz)";
+          adminLabel.className = "text-[11px] text-amber-700 font-bold";
+        }
       }
     }
 
@@ -1132,7 +1171,6 @@
       const wizardScreen = document.getElementById("onboarding-wizard");
       document.getElementById("hint-pin").textContent = state.pin;
 
-      // 1. PIN-Abfrage zuerst
       if (!state.isAuthenticated) {
         authScreen.classList.remove("hidden");
         wizardScreen.classList.add("hidden");
@@ -1141,7 +1179,6 @@
         return;
       }
 
-      // 2. Falls noch keine Fahrer oder keine Kinder hinterlegt sind -> Stammdaten-Assistent öffnen
       if (state.drivers.length === 0 || state.children.length === 0) {
         authScreen.classList.add("hidden");
         wizardScreen.classList.remove("hidden");
@@ -1151,7 +1188,6 @@
 
       wizardScreen.classList.add("hidden");
 
-      // 3. Fahrer-Profil wählen, falls noch nicht gesetzt oder gelöscht
       if (!state.currentUserId || !getDriverById(state.currentUserId)) {
         authScreen.classList.remove("hidden");
         showUserSelectionStep();
@@ -1351,7 +1387,6 @@
 
         html += `
           <div class="space-y-3">
-            <!-- Tages-Header -->
             <div class="flex items-center justify-between px-1">
               <h2 class="text-sm font-extrabold text-slate-900 tracking-tight">${formatDateGerman(date)}</h2>
               <span class="text-[11px] font-semibold ${openLegs.length > 0 ? "text-amber-600" : "text-emerald-600"}">
@@ -1359,7 +1394,6 @@
               </span>
             </div>
 
-            <!-- a) Trainingsbedarfe der Kinder an diesem Tag -->
             ${dayNeeds.length > 0 ? `
               <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-2">
                 <div class="flex items-center justify-between">
@@ -1412,7 +1446,6 @@
               </div>
             ` : ""}
 
-            <!-- b) Geplante Fahrten für diesen Tag -->
             ${state.planFilter === "all" ? `
               <div class="space-y-2.5">
                 ${dayRides.map(ride => renderRideCard(ride)).join("")}
@@ -1789,7 +1822,6 @@
 
     // --- TAB 3: STAMMDATEN & VORLAGEN ---
     function renderStammdatenView() {
-      // 1. Wochen-Vorlagen
       const tplList = document.getElementById("templates-list");
       const sortedTpls = [...state.templates].sort((a, b) => a.weekday - b.weekday || a.startTime.localeCompare(b.startTime));
 
@@ -1822,7 +1854,6 @@
         };
       });
 
-      // 2. Fahrer / Familien
       document.getElementById("count-drivers-label").textContent = state.drivers.length;
       const drvList = document.getElementById("drivers-list");
       drvList.innerHTML = state.drivers.map(drv => {
@@ -1869,7 +1900,6 @@
         };
       });
 
-      // 3. Kinder
       document.getElementById("count-children-label").textContent = state.children.length;
       const childList = document.getElementById("children-list");
       childList.innerHTML = state.children.map(c => {
@@ -1909,7 +1939,7 @@
 
     // --- TAB 4: FAIRNESS ---
     function renderFairnessView() {
-      const currentMonthPrefix = getTodayStr(0).slice(0, 7); // YYYY-MM
+      const currentMonthPrefix = getTodayStr(0).slice(0, 7);
       const filteredRides = state.fairnessPeriod === "month"
         ? state.rides.filter(r => normalizeDateStr(r.date).startsWith(currentMonthPrefix))
         : state.rides;
@@ -1917,7 +1947,6 @@
       let totalPassengerTrips = 0;
       let savedTrips = 0;
 
-      // Statistik pro Fahrer
       const statsByDriver = state.drivers.map(drv => {
         const drvRides = filteredRides.filter(r => r.driverId === drv.id);
         let carriedKids = 0;
@@ -1941,7 +1970,6 @@
         return { driver: drv, ridesCount: drvRides.length, carriedKids, externalKids };
       }).sort((a, b) => b.ridesCount - a.ridesCount);
 
-      // Statistik pro Familie / Haushalt aggregiert
       const familyMap = new Map();
       statsByDriver.forEach(s => {
         const key = s.driver.familyName;
@@ -2194,7 +2222,6 @@
 
       document.getElementById("wiz-btn-open-admin").onclick = () => {
         document.getElementById("admin-pin-input").value = state.pin;
-        document.getElementById("admin-firebase-json").value = localStorage.getItem(STORAGE_KEY_FB) || "";
         document.getElementById("modal-admin").classList.remove("hidden");
       };
 
@@ -2365,7 +2392,7 @@
           let startOffset = 0;
           if (btn.dataset.fillWeek === "next") {
             const today = new Date();
-            const day = today.getDay(); // 0=So, 1=Mo...
+            const day = today.getDay();
             startOffset = day === 0 ? 1 : (8 - day);
           }
 
@@ -2383,7 +2410,7 @@
                 n.startTime === tpl.startTime
               );
               if (!exists) {
-                await dbSetItem("needs", {
+                state.needs.push(sanitizeRecord("needs", {
                   id: generateId("need"),
                   childId: tpl.childId,
                   date: dateStr,
@@ -2393,14 +2420,20 @@
                   needRueck: true,
                   type: tpl.type || "Gruppentraining",
                   note: tpl.note || ""
-                });
+                }));
                 createdCount++;
               }
             }
           }
 
-          showToast(createdCount > 0 ? `${createdCount} Trainings-Slots eingetragen!` : "Alle Slots dieser Woche waren bereits vorhanden.");
-          if (createdCount > 0) switchTab("plan");
+          if (createdCount > 0) {
+            renderAll();
+            await syncStateToCloud();
+            showToast(`${createdCount} Trainings-Slots eingetragen!`);
+            switchTab("plan");
+          } else {
+            showToast("Alle Slots dieser Woche waren bereits vorhanden.");
+          }
         };
       });
 
@@ -2497,24 +2530,23 @@
         renderFairnessView();
       };
 
-      // --- Einstellungen, JSON Backup & Firebase ---
+      // --- Einstellungen & JSON Backup ---
       document.getElementById("btn-open-admin").onclick = () => {
         document.getElementById("admin-pin-input").value = state.pin;
-        document.getElementById("admin-firebase-json").value = localStorage.getItem(STORAGE_KEY_FB) || "";
         document.getElementById("modal-admin").classList.remove("hidden");
       };
       document.getElementById("btn-close-admin").onclick = () => document.getElementById("modal-admin").classList.add("hidden");
 
-      document.getElementById("btn-save-pin").onclick = () => {
+      document.getElementById("btn-save-pin").onclick = async () => {
         const newPin = document.getElementById("admin-pin-input").value.trim();
         if (newPin.length < 4) {
           showToast("PIN muss mindestens 4 Zeichen lang sein.", "warning");
           return;
         }
         state.pin = newPin;
-        localStorage.setItem(STORAGE_KEY_PIN, newPin);
         document.getElementById("hint-pin").textContent = newPin;
-        showToast("Familien-PIN aktualisiert!");
+        await syncStateToCloud();
+        showToast("Familien-PIN aktualisiert & synchronisiert!");
       };
 
       document.getElementById("btn-export-json").onclick = () => {
@@ -2551,20 +2583,12 @@
             state.templates = (parsed.templates || []).map(x => sanitizeRecord("templates", x)).filter(Boolean);
             state.needs = (parsed.needs || []).map(x => sanitizeRecord("needs", x)).filter(Boolean);
             state.rides = (parsed.rides || []).map(x => sanitizeRecord("rides", x)).filter(Boolean);
-            saveState();
-
-            if (state.isFirebaseMode && db) {
-              const batch = writeBatch(db);
-              ["drivers", "children", "templates", "needs", "rides"].forEach(col => {
-                state[col].forEach(item => batch.set(doc(db, col, item.id), item));
-              });
-              await batch.commit();
-            }
+            await syncStateToCloud();
 
             document.getElementById("modal-admin").classList.add("hidden");
             evaluateAccessFlow();
             renderAll();
-            showToast("Backup erfolgreich importiert!");
+            showToast("Backup erfolgreich importiert & synchronisiert!");
           } catch (err) {
             showToast("Import fehlgeschlagen: " + err.message, "error");
           }
@@ -2573,39 +2597,13 @@
         reader.readAsText(file);
       };
 
-      document.getElementById("btn-save-firebase").onclick = async () => {
-        const raw = document.getElementById("admin-firebase-json").value.trim();
-        if (!raw) {
-          showToast("Bitte Firebase-JSON einfügen.", "warning");
-          return;
-        }
-        try {
-          const parsed = JSON.parse(raw);
-          if (!parsed.projectId || !parsed.apiKey) {
-            throw new Error("projectId oder apiKey fehlt.");
-          }
-          localStorage.setItem(STORAGE_KEY_FB, JSON.stringify(parsed));
-          document.getElementById("modal-admin").classList.add("hidden");
-          await initDataLayer();
-          showToast("Mit Firebase Firestore verbunden!");
-        } catch (err) {
-          showToast("Ungültiges JSON: " + err.message, "error");
-        }
-      };
-
-      document.getElementById("btn-clear-firebase").onclick = async () => {
-        localStorage.removeItem(STORAGE_KEY_FB);
-        document.getElementById("admin-firebase-json").value = "";
-        await initDataLayer();
-        showToast("Firebase getrennt – Lokal-Modus aktiv");
-      };
-
       document.getElementById("btn-reset-all").onclick = async () => {
-        if (await customConfirm("Alle Daten löschen?", "Alle Fahrer, Kinder, Vorlagen und Fahrten werden unwiderruflich aus dem lokalen Speicher entfernt.")) {
+        if (await customConfirm("Alle Daten löschen?", "Alle Fahrer, Kinder, Vorlagen und Fahrten werden unwiderruflich aus dem lokalen Speicher und der Cloud entfernt.")) {
           localStorage.removeItem(STORAGE_KEY_DATA);
           localStorage.removeItem(STORAGE_KEY_USER);
           state.currentUserId = null;
           loadState();
+          await syncStateToCloud();
           document.getElementById("modal-admin").classList.add("hidden");
           evaluateAccessFlow();
           renderAll();
