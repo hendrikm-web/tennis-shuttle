@@ -57,7 +57,7 @@
   <!-- Zentrierter Mobile-First App-Container -->
   <div id="app-wrapper" class="min-h-screen max-w-2xl mx-auto bg-slate-50 shadow-2xl border-x border-slate-200/80 flex flex-col relative">
 
-    <!-- ==================== 1. LOGIN / PIN OVERLAY ==================== -->
+    <!-- ==================== 1. LOGIN OVERLAY ==================== -->
     <div id="auth-screen" class="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4 hidden">
       <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100">
         <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 text-white mx-auto mb-4 shadow-lg shadow-emerald-600/30">
@@ -66,27 +66,41 @@
         <h1 class="text-2xl font-extrabold text-center text-slate-900">Tennis-Shuttle</h1>
         <p class="text-sm text-slate-500 text-center mt-1 mb-6">Fahrgemeinschaften zum Leistungszentrum</p>
 
-        <!-- Schritt 1: PIN -->
-        <div id="auth-step-pin" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Familien-PIN eingeben</label>
-            <input type="password" id="pin-input" inputmode="numeric" maxlength="12" placeholder="••••"
-              class="w-full text-center text-2xl tracking-[0.4em] font-bold px-4 py-3.5 rounded-2xl border-2 border-slate-200 focus:border-emerald-600 focus:outline-none transition" />
-            <p class="text-xs text-slate-400 mt-2 text-center">Aktueller PIN: <span class="font-mono font-bold text-slate-600" id="hint-pin">2026</span></p>
-          </div>
-          <button type="button" id="btn-verify-pin" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
-            <span>Weiter</span>
-            <i data-lucide="arrow-right" class="w-5 h-5"></i>
-          </button>
-        </div>
+        <div id="auth-step-loading" class="hidden text-center text-sm text-slate-500">Anmeldung wird geprüft…</div>
 
-        <!-- Schritt 2: Fahrer-Profil wählen -->
+        <form id="auth-form" class="space-y-3">
+          <div>
+            <label for="auth-email" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">E-Mail</label>
+            <input type="email" id="auth-email" autocomplete="email" required
+              class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-emerald-600 focus:outline-none" />
+          </div>
+          <div>
+            <label for="auth-password" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Passwort</label>
+            <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required
+              class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-emerald-600 focus:outline-none" />
+          </div>
+          <p id="auth-error" class="hidden text-xs text-rose-700" role="alert"></p>
+          <button type="submit" id="btn-sign-in" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition">
+            Anmelden
+          </button>
+          <button type="button" id="btn-create-account" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition">
+            Konto erstellen
+          </button>
+        </form>
+
         <div id="auth-step-user" class="space-y-4 hidden">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Wer bist du?</label>
             <div id="user-select-list" class="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-1"></div>
           </div>
-          <button type="button" id="btn-back-pin" class="w-full text-xs text-slate-400 hover:text-slate-600 py-2">← Zurück zur PIN-Eingabe</button>
+          <button type="button" id="btn-sign-out-profile" class="w-full text-xs text-slate-400 hover:text-slate-600 py-2">Abmelden</button>
+        </div>
+
+        <div id="auth-step-membership" class="hidden space-y-3 text-center">
+          <p class="text-sm font-semibold text-slate-800">Noch kein Zugriff auf diese Gruppe.</p>
+          <p class="text-xs text-slate-500">Bitte den Gruppenadministrator bitten, deinen Firebase-Account freizuschalten. Nach der Freischaltung bitte erneut anmelden.</p>
+          <p id="membership-error" class="hidden text-xs text-rose-700" role="alert"></p>
+          <button type="button" id="btn-sign-out-pending" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition">Abmelden</button>
         </div>
       </div>
     </div>
@@ -186,8 +200,8 @@
         <!-- Cloud-Status Hinweis -->
         <div class="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200/80 flex items-center justify-between gap-3">
           <div class="text-xs text-slate-600">
-            <strong class="text-emerald-950 block">Firebase Live-Sync aktiv (tennis-shuttle)</strong>
-            Bereits in der Cloud gespeicherte Stammdaten werden automatisch geladen.
+            <strong class="text-emerald-950 block">Firebase Live-Sync (tennis-shuttle)</strong>
+            Nur freigeschaltete Accounts können die Gruppendaten laden.
           </div>
           <button type="button" id="wiz-btn-open-admin" class="px-3 py-2 rounded-xl bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-900 font-bold text-xs shrink-0">
             Einstellungen
@@ -606,7 +620,7 @@
               <span id="admin-sync-status-label" class="text-[11px] text-emerald-700 font-bold">Prüfe Verbindung...</span>
             </div>
             <p class="text-xs text-slate-600 leading-relaxed">
-              Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (Pfad <code class="bg-white px-1 rounded">/tennis_shuttle/main_state</code>).
+              Projekt <code class="bg-white px-1.5 py-0.5 rounded border border-emerald-200 font-semibold">tennis-shuttle</code> (Gruppe <code class="bg-white px-1 rounded">main</code>).
             </p>
             <div id="admin-sync-error-box" class="hidden bg-rose-50 border border-rose-200 text-rose-800 text-[11px] p-2.5 rounded-xl font-medium"></div>
             <div class="flex gap-2 pt-1">
@@ -614,15 +628,6 @@
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                 <span>Verbindung testen & synchronisieren</span>
               </button>
-            </div>
-          </div>
-
-          <!-- PIN ändern -->
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/70 space-y-2">
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600">Gemeinsamer Familien-PIN</label>
-            <div class="flex gap-2">
-              <input type="text" id="admin-pin-input" maxlength="12" class="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-mono font-bold text-base" />
-              <button type="button" id="btn-save-pin" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-semibold text-xs hover:bg-slate-800">Speichern</button>
             </div>
           </div>
 
@@ -650,7 +655,7 @@
               <span>Alle Daten löschen</span>
             </button>
             <button type="button" id="btn-logout" class="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold text-xs">
-              Sperren (PIN)
+              Abmelden
             </button>
           </div>
         </div>
@@ -691,7 +696,10 @@
   <script type="module">
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import {
-      getDatabase, ref, set, onValue, off
+      createUserWithEmailAndPassword, getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+    } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import {
+      getDatabase, ref, set, get, onValue
     } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
 
     // =========================================================================
@@ -708,11 +716,10 @@
       measurementId: "G-2HCQ7VGK5X"
     };
 
-    const RTDB_PATH = "tennis_shuttle/main_state";
-
-    const STORAGE_KEY_DATA = "tennis_shuttle_state_v2";
-    const STORAGE_KEY_PIN = "tennis_shuttle_pin_v2";
-    const STORAGE_KEY_USER = "tennis_shuttle_user_v2";
+    const GROUP_ID = "main";
+    const GROUP_PATH = `tennis_shuttle/groups/${GROUP_ID}`;
+    const STORAGE_KEY_DATA = "tennis_shuttle_state_v3";
+    const STORAGE_KEY_USER = "tennis_shuttle_user_v3";
 
     const WEEKDAYS_DE = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
     const WEEKDAYS_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
@@ -724,9 +731,10 @@
       templates: [], // { id, childId, weekday, startTime, endTime, type, note }
       needs: [],     // { id, childId, date, startTime, endTime, needHin, needRueck, type, note }
       rides: [],     // { id, driverId, date, direction, time, seats, note, status, passengers: [] }
-      currentUserId: localStorage.getItem(STORAGE_KEY_USER) || null,
-      pin: localStorage.getItem(STORAGE_KEY_PIN) || "2026",
-      isAuthenticated: sessionStorage.getItem("tennis_shuttle_auth") === "1",
+      currentUserId: null,
+      authUser: null,
+      authInitialized: false,
+      hasGroupAccess: null,
       activeTab: "plan",
       planFilter: "all",
       fairnessPeriod: "all",
@@ -737,10 +745,26 @@
     };
 
     let rtdb = null;
+    let firebaseAuth = null;
     let shuttleDbRef = null;
     let connectedDbRef = null;
     let unsubscribeValue = null;
     let unsubscribeConnected = null;
+    function getUserStorageKey(key) {
+      if (!state.authUser) throw new Error("Cannot access user storage while signed out.");
+      return `${key}_${state.authUser.uid}`;
+    }
+
+    function clearUserData(clearProfile = true) {
+      state.drivers = [];
+      state.children = [];
+      state.templates = [];
+      state.needs = [];
+      state.rides = [];
+      if (clearProfile) state.currentUserId = null;
+      state.selectedRideId = null;
+    }
+
     // 2. HILFSFUNKTIONEN
     // =========================================================================
     function generateId(prefix = "id") {
@@ -858,7 +882,7 @@
     }
 
     // =========================================================================
-    // 3. STATE PERSISTENZ & ECHTZEIT-SYNCHRONISATION (FIRESTORE + LOCALSTORAGE)
+    // 3. STATE PERSISTENZ & ECHTZEIT-SYNCHRONISATION (REALTIME DATABASE + LOCALSTORAGE)
     // =========================================================================
     function sanitizeRecord(colName, item) {
       if (!item) return null;
@@ -917,7 +941,6 @@
         templates: state.templates,
         needs: state.needs,
         rides: state.rides,
-        pin: state.pin || "2026",
         updatedAt: new Date().toISOString()
       };
     }
@@ -929,40 +952,35 @@
       state.templates = Array.isArray(payload.templates) ? payload.templates.map(x => sanitizeRecord("templates", x)).filter(Boolean) : [];
       state.needs = Array.isArray(payload.needs) ? payload.needs.map(x => sanitizeRecord("needs", x)).filter(Boolean) : [];
       state.rides = Array.isArray(payload.rides) ? payload.rides.map(x => sanitizeRecord("rides", x)).filter(Boolean) : [];
-      if (payload.pin && String(payload.pin).trim().length >= 4) {
-        state.pin = String(payload.pin).trim();
-        localStorage.setItem(STORAGE_KEY_PIN, state.pin);
-      }
     }
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(buildSyncPayload()));
-      localStorage.setItem(STORAGE_KEY_PIN, state.pin || "2026");
+      if (!state.authUser || state.hasGroupAccess !== true) return;
+      localStorage.setItem(getUserStorageKey(STORAGE_KEY_DATA), JSON.stringify(buildSyncPayload()));
     }
 
     function loadState() {
-      const raw = localStorage.getItem(STORAGE_KEY_DATA);
+      if (!state.authUser || state.hasGroupAccess !== true) {
+        clearUserData();
+        return;
+      }
+
+      state.currentUserId = localStorage.getItem(getUserStorageKey(STORAGE_KEY_USER)) || null;
+      const raw = localStorage.getItem(getUserStorageKey(STORAGE_KEY_DATA));
       if (!raw) {
-        state.drivers = [];
-        state.children = [];
-        state.templates = [];
-        state.needs = [];
-        state.rides = [];
+        clearUserData(false);
         return;
       }
       try {
         applyCloudOrLocalPayload(JSON.parse(raw));
       } catch (err) {
         console.error("Fehler beim Laden des localStorage:", err);
-        state.drivers = [];
-        state.children = [];
-        state.templates = [];
-        state.needs = [];
-        state.rides = [];
+        clearUserData(false);
       }
     }
 
     async function syncStateToCloud(showSuccessToast = false) {
+      if (!state.authUser || state.hasGroupAccess !== true) return false;
       saveState();
       if (!shuttleDbRef || state.isSyncingFromCloud) return false;
       try {
@@ -985,7 +1003,7 @@
       const code = err?.code || "";
       const msg = err?.message || String(err);
       if (code === "PERMISSION_DENIED" || msg.toLowerCase().includes("permission_denied") || msg.toLowerCase().includes("permission denied")) {
-        return "Zugriff verweigert (Realtime Database Regeln blockieren Zugriff). Bitte in Firebase unter Realtime Database → Regeln '.read': true, '.write': true setzen.";
+        return "Zugriff verweigert. Bitte Gruppenmitgliedschaft und Firebase-Sicherheitsregeln vom Administrator prüfen lassen.";
       }
       return msg;
     }
@@ -1019,16 +1037,37 @@
         unsubscribeConnected = null;
       }
 
-      loadState();
-      evaluateAccessFlow();
-      renderAll();
+      shuttleDbRef = null;
+      state.hasInitialCloudSnapshot = false;
+      state.isFirebaseMode = false;
 
       try {
-        const app = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
-        if (!rtdb) {
-          rtdb = getDatabase(app);
+        const user = state.authUser;
+        if (!user) {
+          state.hasGroupAccess = null;
+          clearUserData();
+          evaluateAccessFlow();
+          renderAll();
+          return;
         }
-        shuttleDbRef = ref(rtdb, RTDB_PATH);
+
+        const membershipRef = ref(rtdb, `${GROUP_PATH}/members/${user.uid}`);
+        const membershipSnapshot = await get(membershipRef);
+        if (state.authUser?.uid !== user.uid) return;
+        if (membershipSnapshot.val() !== true) {
+          state.hasGroupAccess = false;
+          clearUserData();
+          evaluateAccessFlow();
+          renderAll();
+          return;
+        }
+
+        state.hasGroupAccess = true;
+        loadState();
+        evaluateAccessFlow();
+        renderAll();
+
+        shuttleDbRef = ref(rtdb, `${GROUP_PATH}/main_state`);
         connectedDbRef = ref(rtdb, ".info/connected");
 
         // Live-Verbindungsstatus der Realtime Database überwachen
@@ -1043,8 +1082,9 @@
           }
         });
 
-        // Echtzeit-Datenstream für /tennis_shuttle/main_state
+        // Echtzeit-Datenstream nur für Mitglieder der konfigurierten Gruppe
         unsubscribeValue = onValue(shuttleDbRef, async (snapshot) => {
+          if (state.authUser?.uid !== user.uid || state.hasGroupAccess !== true) return;
           state.isFirebaseMode = true;
           updateSyncBadge(true, null);
 
@@ -1075,11 +1115,20 @@
           const readableErr = formatRealtimeDbError(error);
           state.isFirebaseMode = false;
           updateSyncBadge(false, readableErr);
+          if (error.code === "PERMISSION_DENIED") {
+            state.hasGroupAccess = false;
+            clearUserData();
+            evaluateAccessFlow();
+            renderAll();
+          }
         });
       } catch (err) {
         console.error("Firebase RTDB Init failed:", err);
         state.isFirebaseMode = false;
-        updateSyncBadge(false, err.message);
+        state.hasGroupAccess = false;
+        clearUserData();
+        evaluateAccessFlow(err.message);
+        renderAll();
       }
     }
 
@@ -1213,21 +1262,45 @@
     // =========================================================================
     // 5. ZUGANG, LOGIN & STAMMDATEN-WIZARD STEUERUNG
     // =========================================================================
-    function evaluateAccessFlow() {
+    function evaluateAccessFlow(accessError = null) {
       const authScreen = document.getElementById("auth-screen");
       const wizardScreen = document.getElementById("onboarding-wizard");
-      document.getElementById("hint-pin").textContent = state.pin;
 
-      if (!state.isAuthenticated) {
+      document.getElementById("auth-step-loading").classList.toggle("hidden", state.authInitialized);
+      document.getElementById("auth-form").classList.toggle("hidden", !state.authInitialized || Boolean(state.authUser));
+      document.getElementById("auth-step-user").classList.add("hidden");
+      document.getElementById("auth-step-membership").classList.add("hidden");
+      wizardScreen.classList.add("hidden");
+
+      if (!state.authInitialized) {
         authScreen.classList.remove("hidden");
-        wizardScreen.classList.add("hidden");
-        document.getElementById("auth-step-pin").classList.remove("hidden");
-        document.getElementById("auth-step-user").classList.add("hidden");
         return;
       }
 
+      if (!state.authUser) {
+        authScreen.classList.remove("hidden");
+        document.getElementById("auth-form").classList.remove("hidden");
+        return;
+      }
+
+      if (state.hasGroupAccess === null) {
+        authScreen.classList.remove("hidden");
+        document.getElementById("auth-step-loading").classList.remove("hidden");
+        return;
+      }
+
+      if (state.hasGroupAccess === false) {
+        authScreen.classList.remove("hidden");
+        const membershipStep = document.getElementById("auth-step-membership");
+        membershipStep.classList.remove("hidden");
+        const error = document.getElementById("membership-error");
+        error.textContent = accessError || "";
+        error.classList.toggle("hidden", !accessError);
+        return;
+      }
+
+      authScreen.classList.add("hidden");
       if (state.drivers.length === 0 || state.children.length === 0) {
-        authScreen.classList.add("hidden");
         wizardScreen.classList.remove("hidden");
         renderOnboardingWizard();
         return;
@@ -1241,12 +1314,10 @@
         return;
       }
 
-      authScreen.classList.add("hidden");
       updateHeaderInfo();
     }
 
     function showUserSelectionStep() {
-      document.getElementById("auth-step-pin").classList.add("hidden");
       document.getElementById("auth-step-user").classList.remove("hidden");
 
       const list = document.getElementById("user-select-list");
@@ -1267,7 +1338,7 @@
       list.querySelectorAll("[data-select-driver]").forEach(btn => {
         btn.onclick = () => {
           state.currentUserId = btn.dataset.selectDriver;
-          localStorage.setItem(STORAGE_KEY_USER, state.currentUserId);
+          localStorage.setItem(getUserStorageKey(STORAGE_KEY_USER), state.currentUserId);
           document.getElementById("auth-screen").classList.add("hidden");
           updateHeaderInfo();
           renderAll();
@@ -2198,28 +2269,42 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
-      // --- PIN & Login ---
-      document.getElementById("btn-verify-pin").onclick = () => {
-        const entered = document.getElementById("pin-input").value.trim();
-        if (entered === state.pin) {
-          state.isAuthenticated = true;
-          sessionStorage.setItem("tennis_shuttle_auth", "1");
-          document.getElementById("pin-input").value = "";
-          evaluateAccessFlow();
-        } else {
-          showToast("Falscher PIN!", "error");
+      localStorage.removeItem("tennis_shuttle_pin_v2");
+      sessionStorage.removeItem("tennis_shuttle_auth");
+
+      const authError = document.getElementById("auth-error");
+      const emailInput = document.getElementById("auth-email");
+      const passwordInput = document.getElementById("auth-password");
+      const authForm = document.getElementById("auth-form");
+
+      document.getElementById("auth-form").onsubmit = async (e) => {
+        e.preventDefault();
+        authError.classList.add("hidden");
+        try {
+          await signInWithEmailAndPassword(firebaseAuth, emailInput.value.trim(), passwordInput.value);
+          passwordInput.value = "";
+        } catch (err) {
+          console.error("Firebase sign-in failed:", err);
+          authError.textContent = err.message || "Anmeldung fehlgeschlagen.";
+          authError.classList.remove("hidden");
         }
       };
 
-      document.getElementById("pin-input").addEventListener("keydown", (e) => {
-        if (e.key === "Enter") document.getElementById("btn-verify-pin").click();
-      });
-
-      document.getElementById("btn-back-pin").onclick = () => {
-        state.isAuthenticated = false;
-        sessionStorage.removeItem("tennis_shuttle_auth");
-        evaluateAccessFlow();
+      document.getElementById("btn-create-account").onclick = async () => {
+        if (!authForm.reportValidity()) return;
+        authError.classList.add("hidden");
+        try {
+          await createUserWithEmailAndPassword(firebaseAuth, emailInput.value.trim(), passwordInput.value);
+          passwordInput.value = "";
+        } catch (err) {
+          console.error("Firebase account creation failed:", err);
+          authError.textContent = err.message || "Konto konnte nicht erstellt werden.";
+          authError.classList.remove("hidden");
+        }
       };
+
+      document.getElementById("btn-sign-out-profile").onclick = () => signOut(firebaseAuth);
+      document.getElementById("btn-sign-out-pending").onclick = () => signOut(firebaseAuth);
 
       document.getElementById("btn-switch-user").onclick = () => {
         document.getElementById("auth-screen").classList.remove("hidden");
@@ -2241,7 +2326,7 @@
         await dbSetItem("drivers", newDrv);
         if (!state.currentUserId) {
           state.currentUserId = newDrv.id;
-          localStorage.setItem(STORAGE_KEY_USER, newDrv.id);
+          localStorage.setItem(getUserStorageKey(STORAGE_KEY_USER), newDrv.id);
         }
         document.getElementById("wiz-driver-name").value = "";
         document.getElementById("wiz-driver-family").value = "";
@@ -2268,7 +2353,6 @@
       };
 
       document.getElementById("wiz-btn-open-admin").onclick = () => {
-        document.getElementById("admin-pin-input").value = state.pin;
         document.getElementById("modal-admin").classList.remove("hidden");
       };
 
@@ -2579,7 +2663,6 @@
 
       // --- Einstellungen & JSON Backup ---
       document.getElementById("btn-open-admin").onclick = () => {
-        document.getElementById("admin-pin-input").value = state.pin;
         document.getElementById("modal-admin").classList.remove("hidden");
       };
       document.getElementById("btn-close-admin").onclick = () => document.getElementById("modal-admin").classList.add("hidden");
@@ -2589,18 +2672,6 @@
         if (ok) {
           await initDataLayer();
         }
-      };
-
-      document.getElementById("btn-save-pin").onclick = async () => {
-        const newPin = document.getElementById("admin-pin-input").value.trim();
-        if (newPin.length < 4) {
-          showToast("PIN muss mindestens 4 Zeichen lang sein.", "warning");
-          return;
-        }
-        state.pin = newPin;
-        document.getElementById("hint-pin").textContent = newPin;
-        await syncStateToCloud();
-        showToast("Familien-PIN aktualisiert & synchronisiert!");
       };
 
       document.getElementById("btn-export-json").onclick = () => {
@@ -2653,8 +2724,8 @@
 
       document.getElementById("btn-reset-all").onclick = async () => {
         if (await customConfirm("Alle Daten löschen?", "Alle Fahrer, Kinder, Vorlagen und Fahrten werden unwiderruflich aus dem lokalen Speicher und der Cloud entfernt.")) {
-          localStorage.removeItem(STORAGE_KEY_DATA);
-          localStorage.removeItem(STORAGE_KEY_USER);
+          localStorage.removeItem(getUserStorageKey(STORAGE_KEY_DATA));
+          localStorage.removeItem(getUserStorageKey(STORAGE_KEY_USER));
           state.currentUserId = null;
           loadState();
           await syncStateToCloud();
@@ -2665,15 +2736,24 @@
         }
       };
 
-      document.getElementById("btn-logout").onclick = () => {
-        state.isAuthenticated = false;
-        sessionStorage.removeItem("tennis_shuttle_auth");
+      document.getElementById("btn-logout").onclick = async () => {
         document.getElementById("modal-admin").classList.add("hidden");
-        evaluateAccessFlow();
+        await signOut(firebaseAuth);
       };
 
       // App starten
-      initDataLayer();
+      const app = getApps().length > 0 ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+      firebaseAuth = getAuth(app);
+      rtdb = getDatabase(app);
+      onAuthStateChanged(firebaseAuth, async (user) => {
+        state.authUser = user;
+        state.authInitialized = true;
+        state.hasGroupAccess = null;
+        clearUserData();
+        evaluateAccessFlow();
+        renderAll();
+        await initDataLayer();
+      });
     });
   </script>
 </body>

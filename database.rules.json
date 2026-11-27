@@ -1,0 +1,22 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "tennis_shuttle": {
+      "groups": {
+        "$groupId": {
+          "members": {
+            "$uid": {
+              ".read": "auth != null && auth.uid === $uid",
+              ".write": false
+            }
+          },
+          "main_state": {
+            ".read": "auth != null && root.child('tennis_shuttle/groups').child($groupId).child('members').child(auth.uid).val() === true",
+            ".write": "auth != null && root.child('tennis_shuttle/groups').child($groupId).child('members').child(auth.uid).val() === true"
+          }
+        }
+      }
+    }
+  }
+}
